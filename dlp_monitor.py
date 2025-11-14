@@ -58,7 +58,7 @@ def scan_content(content):
 def log_incident(event_type, data_type, action, details):
     """
     DLP olaylarını tek bir CSV dosyasına kaydeder ve ekrana bilgi basar.
-    Excel uyumluluğu için 'utf-8-sig' kodlaması kullanıldı.
+    Excel'de Türkçe karakter uyumluluğu için 'windows-1254' kodlaması kullanıldı.
     PermissionError'a karşı korumalı hale getirildi.
     """
     
@@ -67,11 +67,13 @@ def log_incident(event_type, data_type, action, details):
     try:
         # dlp_incidents.csv yoksa başlık satırını ekle
         if not os.path.exists("dlp_incidents.csv"):
-            with open("dlp_incidents.csv", "w", encoding='utf-8-sig') as f:
+            # DEĞİŞİKLİK BURADA: 'utf-8-sig' yerine 'windows-1254'
+            with open("dlp_incidents.csv", "w", encoding='windows-1254') as f:
                 f.write("Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay\n")
         
         # Yeni olayı kaydet
-        with open("dlp_incidents.csv", "a", encoding='utf-8-sig') as f:
+        # DEĞİŞİKLİK BURADA: 'utf-8-sig' yerine 'windows-1254'
+        with open("dlp_incidents.csv", "a", encoding='windows-1254') as f:
             f.write(log_line)
             
         print(f"\n[!!! DLP OLAYI KAYDEDİLDİ !!!] - {data_type} tespiti. Aksiyon: {action}")
@@ -84,7 +86,7 @@ def log_incident(event_type, data_type, action, details):
     except Exception as e:
         # Diğer olası hatalar için
         print(f"\n[!!! LOGLAMA HATASI !!!] - {e}")
-
+        
 # --- 3. UÇ NOKTA AYARLARI ve Klasör Hazırlığı ---
 
 USB_DIR = "SIM_USB_SURUCU"

@@ -40,14 +40,23 @@ MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 ALLOWED_EXT = {".txt", ".csv", ".docx", ".pdf", ".xlsx", ".xls", ".pptx"}
 
 # ============================================================
-# USB POLICY MODE (STRICT: tüm dosyaları karantina, SMART: sadece hassas veri)
+# USB POLICY MODE (STRICT: tüm dosyaları karantinaya alır, SMART: sadece hassas veri içerenleri karantinaya alır)
 # ============================================================
 
-USB_POLICY = "SMART"  # Varsayılan “akıllı mod”
+USB_POLICY = "SMART"  # Varsayılan ayar
+
+# ============================================================
+# DYNAMIC BANNED WORDS (regex değil, düz kelime arama)
+# ============================================================
+
+BANNED_WORDS = set()  # runtime'da eklenecek
 
 # ============================================================
 # HELPERS: TCKN / PHONE / IBAN VALIDATORS
 # ============================================================
+
+
+
 
 def is_valid_tckn(tckn: str) -> bool:
     """
@@ -188,108 +197,116 @@ DLP_RULES = {
 
 def scan_content(content: str):
     """
-    Tarama: tüm kuralları uygula, gerekli doğrulamaları yap, maskeli sonuçlar döndür.
-    Öncelik: önce telefon => sonra TCKN (telefonun TCKN ile karışmasını önlemek için)
+    İçeriği tarar ve tespit edilen hassas verileri döndürür.
+    DÖNÜŞ FORMAT:
+    [
+        {"data_type": "TCKN", "masked_match": "TC: ******1234"},
+        {"data_type": "BANNED_WORD", "masked_match": "password"},
+        ...
+    ]
     """
-    incidents = []
+
+    incidents = []  # SONUÇ LİSTESİ
+
     if not content:
         return incidents
 
-    # Normalize text for regex search (but preserve original for masking)
-    try:
-        full_text = str(content)
-    except Exception:
-        full_text = ""
+    text = str(content)
 
-    # --- 1) Telefonları önce tespit et (ve kaydet) ---
-    try:
-        tel_pattern = re.compile(DLP_RULES["TEL_NO"]["pattern"])
-        tel_matches = tel_pattern.findall(full_text)
-    except Exception:
-        tel_matches = []
-
-    # Ensure unique and process
-    processed_spans = []  # keep spans to remove from later TCKN search
-    for m in tel_matches:
-        # find exact span(s)
-        for mo in re.finditer(re.escape(m), full_text):
-            span = mo.span()
-            processed_spans.append(span)
-        if is_valid_phone(m):
-            flat = re.sub(r"\D", "", m)
-            masked = f"TEL: ******{flat[-2:]}"
+    # =========================================================
+    # 1) TELEFON EN ÖNCE – karışmasın diye
+    # =========================================================
+    tel_regex = re.compile(DLP_RULES["TEL_NO"]["pattern"])
+    for match in tel_regex.findall(text):
+        if is_valid_phone(match):
+            flat = re.sub(r"\D", "", match)
             incidents.append({
                 "data_type": "TEL_NO",
-                "description": DLP_RULES["TEL_NO"]["description"],
-                "masked_match": masked
+                "masked_match": f"TEL: ******{flat[-2:]}"
+            })
+    # Telefonları TCKN taramasından çıkarmak için çıkarıyoruz
+    cleaned_text = tel_regex.sub(" ", text)
+
+    # =========================================================
+    # 2) TCKN TESPITI
+    # =========================================================
+    tckn_regex = re.compile(DLP_RULES["TCKN"]["pattern"])
+    for match in tckn_regex.findall(cleaned_text):
+        only_digits = re.sub(r"\D", "", match)
+        if is_valid_tckn(only_digits):
+            incidents.append({
+                "data_type": "TCKN",
+                "masked_match": f"TC: ******{only_digits[-4:]}"
             })
 
-    # Build text with phone spans removed to prevent phone being matched as TCKN
-    text_for_tckn = list(full_text)
-    for start, end in processed_spans:
-        for i in range(start, end):
-            if 0 <= i < len(text_for_tckn):
-                text_for_tckn[i] = " "  # replace with space
+    # =========================================================
+    # 3) IBAN, CC, EMAIL — NORMAL REGEX TARAMASI
+    # =========================================================
+    for dtype, rule in DLP_RULES.items():
+        if dtype in ("TEL_NO", "TCKN"):  
+            continue  
 
-    text_for_tckn = "".join(text_for_tckn)
+        regex = re.compile(rule["pattern"])
+        for match in regex.findall(text):
+            m = match if isinstance(match, str) else "".join(match)
 
-    # --- 2) Iterate other rules (TCKN, IBAN_TR, KREDI_KARTI, E_POSTA) ---
-    for data_type, rule in DLP_RULES.items():
-        if data_type == "TEL_NO":
-            continue  # handled above
-
-        try:
-            matches = re.findall(rule["pattern"], text_for_tckn if data_type == "TCKN" else full_text)
-        except re.error:
-            matches = []
-
-        for match in matches:
-            if isinstance(match, tuple):
-                match = "".join(match)
-
-            if data_type == "TCKN":
-                cand = re.sub(r"\D", "", match)
-                if not is_valid_tckn(cand):
-                    continue
-                masked = f"TC: ******{cand[-4:]}"
+            if dtype == "IBAN_TR" and is_valid_iban(m):
                 incidents.append({
-                    "data_type": "TCKN",
-                    "description": rule["description"],
-                    "masked_match": masked
+                    "data_type": "IBAN_TR",
+                    "masked_match": f"IBAN: ****{m[-4:]}"
                 })
 
-            elif data_type == "IBAN_TR":
-                cand = re.sub(r"\s+", "", match).upper()
-                if is_valid_iban(cand):
-                    masked = f"IBAN: ****{cand[-4:]}"
-                    incidents.append({
-                        "data_type": "IBAN_TR",
-                        "description": rule["description"],
-                        "masked_match": masked
-                    })
-                else:
-                    # invalid IBAN -> skip
-                    continue
-
-            elif data_type == "KREDI_KARTI":
-                flat = re.sub(r"\D", "", match)
-                # optional: Luhn check could be added; here we mask by last4
-                masked = f"CC: XXXX...{flat[-4:]}"
+            elif dtype == "KREDI_KARTI":
+                digits = re.sub(r"\D", "", m)
                 incidents.append({
                     "data_type": "KREDI_KARTI",
-                    "description": rule["description"],
-                    "masked_match": masked
+                    "masked_match": f"CC: XXXX...{digits[-4:]}"
                 })
 
-            elif data_type == "E_POSTA":
-                masked = f"EMAIL: <{match.split('@')[0][:1]}***@...>"
+            elif dtype == "E_POSTA":
                 incidents.append({
                     "data_type": "E_POSTA",
-                    "description": rule["description"],
-                    "masked_match": masked
+                    "masked_match": f"EMAIL: <{m.split('@')[0][0]}***@...>"
                 })
 
+    # =========================================================
+    # 4) YASAKLI KEYWORD TARAMASI (EXTRA)
+    # =========================================================
+    for word in BANNED_WORDS:
+        if word.lower() in text.lower():
+            incidents.append({
+                "data_type": "BANNED_WORD",
+                "masked_match": word
+            })
+
     return incidents
+
+
+def add_banned_word(word: str):
+    BANNED_WORDS.add(word.strip().lower())
+    print(f"[DLP] Yasaklı kelime eklendi: {word}")
+
+
+def remove_banned_word(word: str):
+    """Yasaklı kelime listeden çıkarılır. Yoksa uyarı verir."""
+    cleaned = word.strip().lower()
+    if cleaned in BANNED_WORDS:
+        BANNED_WORDS.remove(cleaned)
+        print(f"[DLP] Yasaklı kelime kaldırıldı: {word}")
+    else:
+        print(f"[DLP] Kelime bulunamadı: {word}")
+
+
+def list_banned_words():
+    """Şu anda aktif yasaklı kelimeleri gösterir."""
+    if not BANNED_WORDS:
+        print("[DLP] Henüz yasaklı kelime eklenmemiş.")
+    else:
+        print("\n--- AKTİF YASAKLI KELİMELER ---")
+        for w in BANNED_WORDS:
+            print(f" - {w}")
+        print("-------------------------------\n")
+
 
 
 # ============================================================
@@ -828,7 +845,7 @@ def run_endpoint_dlp():
     print("--- Mini DLP Endpoint Modu Başlatıldı ---")
     print("Pano Kontrolü: Aktif")
     print("USB Kontrolü: Aktif (Gerçek mount noktaları taranıyor)")
-    print("Kapsam: TCKN, Telefon, Kredi Kartı, E-posta, IBAN")
+    print("Kapsam: TCKN, Telefon, Kredi Kartı, E-posta, IBAN, Yasaklı Kelimeler")
     print("Durdurmak için: CTRL+C\n")
 
     try:
@@ -867,6 +884,10 @@ def main_menu():
     print("  2) Sender Agent (PC1)")
     print("  3) DLP Gateway (Aradaki AI/DLP Agent)")
     print("  4) Receiver Agent (PC2)")
+    print("  5) Yasaklı kelime ekle")
+    print("  5) Yasaklı kelime ekle")
+    print("  6) Yasaklı kelime kaldır")
+    print("  7) Yasaklı kelimeleri listele")
     print("  q) Çık")
     print("===================================================\n")
 
@@ -880,6 +901,21 @@ def main_menu():
         run_gateway()
     elif choice == "4":
         run_receiver()
+    elif choice == "5":
+        word = input("Eklenecek kelime: ").strip()
+        add_banned_word(word)
+        main_menu()
+    elif choice == "5":
+        word = input("Eklenecek kelime: ").strip()
+        add_banned_word(word)
+        main_menu()
+    elif choice == "6":
+        word = input("Kaldırılacak kelime: ").strip()
+        remove_banned_word(word)
+        main_menu()
+    elif choice == "7":
+        list_banned_words()
+        main_menu()
     elif choice in {"q", "quit", "exit"}:
         print("Çıkılıyor...")
     else:

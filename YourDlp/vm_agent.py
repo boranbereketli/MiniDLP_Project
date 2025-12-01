@@ -96,12 +96,19 @@ class USBFileHandler(FileSystemEventHandler):
 
             ext = os.path.splitext(name)[1].lower()
             content = read_file_content(file_path) if ext in ALLOWED_EXT else ""
-            incidents = scan_content(content) if content else []
-            
+
+            # Dinamik Anahtar Kelimeleri Çek
+            dynamic_keywords = usb_policy.get("Keywords", []) 
+            incidents = scan_content(content, dynamic_keywords) if content else []
+  
             blocked_data_types = []
             
             for incident in incidents:
                 data_type = incident["data_type"]
+                # Anahtar Kelime Kontrolü
+                if data_type == "KEYWORD_MATCH":
+                    if dynamic_keywords:
+                        blocked_data_types.append("ANAHTAR_KELİME")
                 if usb_policy.get(data_type, False):
                     blocked_data_types.append(data_type)
             
@@ -207,11 +214,22 @@ def clipboard_monitor():
             current_clipboard_content = pyperclip.paste() or ""
 
             if current_clipboard_content != last_clipboard_content and current_clipboard_content:
-                incidents = scan_content(str(current_clipboard_content))
+                # Dinamik Anahtar Kelimeleri Çek
+                dynamic_keywords = clipboard_policy.get("Keywords", []) 
+                
+                # 🚨 scan_content'ı yeni parametre ile çağır
+                incidents = scan_content(str(current_clipboard_content), dynamic_keywords) 
+                
                 blocked_data_types = []
                 
                 for incident in incidents:
                     data_type = incident["data_type"]
+
+                    # Anahtar Kelime Kontrolü
+                    if data_type == "KEYWORD_MATCH":
+                        if dynamic_keywords:
+                            blocked_data_types.append("ANAHTAR_KELİME")
+                            
                     if clipboard_policy.get(data_type, False):
                         blocked_data_types.append(data_type)
 

@@ -302,15 +302,17 @@ def send_network_message(receiver_id, text):
         print(f"[{VM_ID}] HATA: Gateway'e bağlanılamadı. Mesaj gönderilemedi.")
         return
 
-    msg_data = Message(
-        src=VM_ID,
-        dst=receiver_id,
-        channel="chat",
-        payload=text
-    )
+    # Doğrudan dict formatında payload oluştur
+    payload = {
+        "src": VM_ID,
+        "dst": receiver_id,
+        "channel": "chat",
+        "payload": text
+    }
     
     try:
-        gateway_connection.sendall((json.dumps(msg_data.__dict__) + "\n").encode("utf-8"))
+        # JSON + yeni satır formatında gönder
+        gateway_connection.sendall((json.dumps(payload) + "\n").encode("utf-8"))
     except Exception as e:
         print(f"[{VM_ID}] Gönderme hatası: {e}. Bağlantı yenileniyor.")
         gateway_connection = None

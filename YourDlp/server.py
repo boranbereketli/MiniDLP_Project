@@ -123,6 +123,47 @@ def update_policy():
 
     return jsonify({"status": "ok", "message": "Policy güncellendi"}), 200
 
+@app.route('/logs/<vm_id>', methods=['GET'])
+def get_logs_for_user(vm_id):
+    """
+    Sadece belirtilen vm_id ile ilişkili logları döndürür.
+    Hem 'User: vm_id' formatını (USB/Clipboard) hem de
+    'vm_id->...' formatını (Network) kontrol eder.
+    """
+    try:
+        if not os.path.exists(LOG_CSV):
+            return jsonify({"logs": []})
+
+        filtered = []
+        with open(LOG_CSV, "r", encoding="utf-8") as f:
+            # Başlık satırını atla veya oku
+            lines = f.readlines()
+            
+        for line in lines:
+            # 1. USB/Clipboard/User Logları: "User: vm_user_1 | ..." formatı
+            if f"User: {vm_id}" in line:
+                filtered.append(line.strip())
+                continue
+            
+            # 2. Network Logları (Gönderen): "vm_user_1->vm_user_2 | ..." formatı
+            # Bu log satırında, vm_id'nin gönderici olduğu durumu yakalarız.
+            if f"{vm_id}->" in line:
+                filtered.append(line.strip())
+                continue
+
+            # (Opsiyonel) Eğer ALICI olduğu durumları da logda görmek istiyorsa:
+            # if f"->{vm_id}" in line:
+            #    filtered.append(line.strip())
+
+        return jsonify({"logs": filtered}), 200
+
+    except Exception as e:
+        return jsonify({"logs": [], "error": str(e)})
+
+@app.route("/users", methods=["GET"])
+def get_users():
+    return jsonify({"users": list(USER_POLICIES.keys())})
+
 
 # ============================================================
 # DLP NETWORK GATEWAY (Yeni Politika Uygulama Mantığı)
@@ -138,30 +179,32 @@ def process_message(msg: Message):
         return False, f"[DLP] HATA: Alıcı VM ({dst}) Gateway'e bağlı değil."
 
     # Kaynak kullanıcının bu hedefe uyguladığı kısıtlamaları çek
-    # Eğer src kullanıcısının politikasında dst için özel kural yoksa, network_policy_for_dst = None döner.
     network_policy_for_dst = USER_POLICIES.get(src, {}).get("network", {}).get(dst)
     
     # 1. Politika Kontrolü: İnceleme Yapılmalı mı?
     if network_policy_for_dst is None:
-        # ➡️ Muafiyet/Serbestlik: Kaynak, bu hedefe kısıtlama tanımlamamış (Varsayılan: İzin Verilir, İnceleme Atlanır)
+        # ➡️ Muafiyet/Serbestlik: Kaynak, bu hedefe kısıtlama tanımlamamış.
+        #    Varsayılan: İzin Verilir, İnceleme Atlanır.
         log_incident(
             event_type=f"{msg.channel} Mesajı",
             data_type="YOK",
-            action="İZİN VERİLDİ - Hedefe Özel Kural Yok (İncelemesiz Yönlendirme)",
+            action="İZİN VERİLDİ - Hedefe Özel Kural Yok",
             details=f"{src}->{dst} | İçerik taranmadı (Politika Tanımsız)."
         )
         
         # Mesajı İlet
         recipient_sock = LIVE_CONNECTIONS[dst]['socket']
         payload_to_send = f"[{src}]: {msg.payload}\n"
-        recipient_sock.sendall(payload_to_send.encode("utf-8"))
+        try:
+            recipient_sock.sendall(payload_to_send.encode("utf-8"))
+        except Exception:
+            return False, f"[DLP] HATA: Mesaj Alıcıya gönderilemedi (Soket Hatası)."
         return True, "[DLP] Mesaj incelemesiz iletildi."
 
-      # Dinamik Anahtar Kelimeleri Çek
+    # Dinamik Anahtar Kelimeleri Çek
     dynamic_keywords = network_policy_for_dst.get("Keywords", []) 
 
     # 2. Hassas Veri Tarama (Hem Regex hem de Keywords aranır)
-    # 🚨 scan_content'ı yeni parametre ile çağır
     incidents = scan_content(msg.payload, dynamic_keywords) 
     blocked_data_types = []
 
@@ -172,8 +215,7 @@ def process_message(msg: Message):
 
             # Anahtar kelime eşleşmesi ise, 'Keywords' alanının varlığı yasaktır.
             if data_type == "KEYWORD_MATCH":
-                # Eğer Keywords listesi tanımlıysa, bu KEYWORD_MATCH her zaman yasak olarak kabul edilir
-                # (Zaten kurala girdiği için buraya gelmiştir).
+                # Eğer Keywords listesi tanımlıysa ve eşleştiyse, bu yasaktır.
                 if dynamic_keywords:
                     blocked_data_types.append("ANAHTAR_KELİME")
 
@@ -212,7 +254,11 @@ def process_message(msg: Message):
     # Mesajı İlet (Engellenmediyse)
     recipient_sock = LIVE_CONNECTIONS[dst]['socket']
     payload_to_send = f"[{src}]: {msg.payload}\n"
-    recipient_sock.sendall(payload_to_send.encode("utf-8"))
+    try:
+        recipient_sock.sendall(payload_to_send.encode("utf-8"))
+    except Exception:
+        return False, f"[DLP] HATA: Mesaj Alıcıya gönderilemedi (Soket Hatası)."
+        
     return True, "[DLP] Mesaj iletildi."
 
 

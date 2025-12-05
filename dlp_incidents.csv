@@ -43,3 +43,25 @@ Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay
 2025-12-03 14:40:27,chat Mesajı,YOK,İZİN VERİLDİ - Temiz,vm_user_3->vm_user_1
 2025-12-03 14:40:31,chat Mesajı,ANAHTAR_KELİME,ENGEL - Kısıtlı Veri Tespiti,vm_user_1->vm_user_3 | Yasak: ANAHTAR_KELİME
 2025-12-03 14:40:56,chat Mesajı,ANAHTAR_KELİME,ENGEL - Kısıtlı Veri Tespiti,vm_user_3->vm_user_1 | Yasak: ANAHTAR_KELİME
+2025-12-05 16:39:05,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_2->vm_user_1
+2025-12-05 16:39:11,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-05 16:39:17,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_2->vm_user_1
+2025-12-05 16:39:24,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-05 16:40:10,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-05 16:40:17,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_2->vm_user_1
+2025-12-05 16:40:48,chat,ANAHTAR_KELİME,ENGEL - Yasak Veri,vm_user_1->vm_user_2
+2025-12-05 16:59:42,Ağ Mesajı,Hata,ENGEL - Alıcı Offline,vm_user_1->vm_user_2
+2025-12-05 16:59:55,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_2->vm_user_1
+2025-12-05 17:00:01,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-05 17:00:16,chat,TCKN,ENGEL - Yasak Veri,vm_user_2->vm_user_1
+2025-12-05 17:00:24,chat,TCKN,ENGEL - Yasak Veri,vm_user_1->vm_user_2
+2025-12-05 17:00:56,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_2->vm_user_1
+2025-12-05 17:01:01,chat,TCKN,ENGEL - Yasak Veri,vm_user_2->vm_user_1
+2025-12-05 17:01:09,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-05 17:01:09,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-05 17:01:09,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-05 17:01:13,chat,TCKN,ENGEL - Yasak Veri,vm_user_1->vm_user_2
+2025-12-05 17:08:20,Pano,KREDI_KARTI,ENGEL,User: vm_user_1 | CC: XXXX...3456
+2025-12-05 17:10:02,USB Transfer,KREDI_KARTI,ENGEL,User: vm_user_1 | dlp_test_notclean.txt -> Karantina
+2025-12-05 17:10:17,USB Transfer,KREDI_KARTI,ENGEL,User: vm_user_1 | dlp_test_notclean2.txt -> Karantina
+2025-12-05 17:10:37,Pano,KREDI_KARTI,ENGEL,User: vm_user_1 | CC: XXXX...3456

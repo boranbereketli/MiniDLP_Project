@@ -1,0 +1,140 @@
+/* styles.qss - MERKEZİ TASARIM DOSYASI */
+
+/* --- GENEL AYARLAR --- */
+QWidget {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+    color: #333;
+}
+QMainWindow, QDialog {
+    background-color: #f4f6f9;
+}
+
+/* --- SEKMELER (TAB WIDGET) --- */
+QTabWidget::pane {
+    border: 1px solid #dcdcdc;
+    background: white;
+    border-radius: 6px;
+    top: -1px;
+}
+QTabBar::tab {
+    background: #e0e0e0;
+    border: 1px solid #c4c4c4;
+    padding: 10px 20px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    margin-right: 2px;
+    font-weight: bold;
+}
+QTabBar::tab:selected {
+    background: #ffffff;
+    border-bottom-color: #ffffff;
+    color: #0078d7;
+}
+
+/* --- FORM ELEMANLARI --- */
+QLineEdit, QComboBox {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+}
+QLineEdit:focus, QComboBox:focus {
+    border: 1px solid #0078d7;
+}
+
+/* --- TABLO VE LİSTELER --- */
+QTreeWidget, QTableWidget {
+    border: 1px solid #ddd;
+    alternate-background-color: #f9f9f9;
+}
+QHeaderView::section {
+    background-color: #f1f1f1;
+    padding: 6px;
+    border: none;
+    font-weight: bold;
+    color: #555;
+}
+
+/* --- MAIN WINDOW ÖZEL STİLLERİ --- */
+
+/* Üst Bilgi Kartı (Header) */
+#headerFrame {
+    background-color: white; 
+    border-radius: 10px; 
+    border: 1px solid #ddd;
+}
+#headerTitle {
+    font-size: 20px; 
+    color: #333;
+    font-weight: bold;
+}
+#serverStatusLabel {
+    color: gray; 
+    font-size: 13px;
+}
+
+/* Kullanıcı Listesi Grubu */
+#listGroup {
+    font-weight: bold; 
+    font-size: 14px; 
+    margin-top: 10px;
+}
+
+/* Kullanıcı Listesi (List Widget) */
+#userList {
+    border: 1px solid #ddd; 
+    border-radius: 6px; 
+    background-color: white; 
+    font-size: 14px; 
+    padding: 5px;
+}
+#userList::item {
+    padding: 10px; 
+    border-bottom: 1px solid #eee;
+}
+#userList::item:selected {
+    background-color: #e3f2fd; 
+    color: #0d47a1; 
+    border-radius: 4px;
+}
+
+/* --- BUTONLAR (ID'ye GÖRE RENKLENDİRME) --- */
+QPushButton {
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+QPushButton:hover { opacity: 0.9; }
+
+/* Buton: Genel Mavi */
+QPushButton { background-color: #0078d7; }
+
+/* Buton: Yenile (Gri) */
+#btnRefresh { 
+    background-color: #607d8b; 
+    padding: 8px 15px;
+}
+
+/* Buton: Ekle (Yeşil) */
+#btnAdd { 
+    background-color: #2e7d32; 
+    padding: 12px 20px; 
+    font-size: 14px;
+}
+
+/* Buton: Düzenle (Mavi) */
+#btnEdit { 
+    background-color: #1565c0; 
+    padding: 12px 20px; 
+    font-size: 14px;
+}
+
+/* Buton: Sil (Kırmızı) */
+#btnDelete { 
+    background-color: #c62828; 
+    padding: 12px 20px; 
+    font-size: 14px;
+}

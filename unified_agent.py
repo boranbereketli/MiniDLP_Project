@@ -399,6 +399,16 @@ class PolicyViewerDialog(QDialog):
                     ch.setForeground(1, QColor("red" if v else "green"))
         return t
 
+def get_registered_users():
+    """ Sunucudan kayıtlı kullanıcı listesini çeker. """
+    try:
+        r = requests.get(f"{SERVER_URL}/users", timeout=2)
+        if r.status_code == 200:
+            return r.json().get("users", [])
+    except:
+        pass
+    return []
+
 
 class UnifiedWindow(QWidget):
     def __init__(self):
@@ -406,9 +416,26 @@ class UnifiedWindow(QWidget):
         self.setWindowTitle("DLP Unified Agent - Enterprise Edition")
         self.setMinimumSize(1000, 750)
 
-        vm_id, ok = QInputDialog.getText(self, "Giriş", "VM ID Giriniz (örn: vm_user_1):")
-        if not ok or not vm_id.strip(): sys.exit()
-        self.vm_id = vm_id.strip()
+        # --- KULLANICI ADI KONTROL DÖNGÜSÜ (GÜNCELLENMİŞ KISIM) ---
+        valid_users = get_registered_users()
+        self.vm_id = None
+
+        while not self.vm_id:
+            # Kullanıcıdan VM ID'sini iste
+            vm_id, ok = QInputDialog.getText(self, "Giriş", "VM ID Giriniz (örn: vm_user_1):")
+            
+            # 1. Çıkış / İptal Kontrolü
+            if not ok: 
+                sys.exit()
+
+            # 2. Geçerli Kullanıcı Kontrolü
+            vm_id = vm_id.strip()
+            if vm_id in valid_users:
+                self.vm_id = vm_id # Başarılı giriş
+            elif not vm_id:
+                QMessageBox.critical(self, "Hata", "Kullanıcı adı boş bırakılamaz.")
+            else:
+                QMessageBox.critical(self, "Hata", f"'{vm_id}' kaydedilmemiş bir kullanıcı adıdır. Lütfen geçerli bir kullanıcı adı girin.")
 
         self.core = UnifiedAgentCore(self.vm_id)
         self.core.sig_chat_msg.connect(self.on_chat_msg)

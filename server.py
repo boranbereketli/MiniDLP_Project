@@ -30,7 +30,7 @@ class Colors:
 # ============================================================
 # CONFIG
 # ============================================================
-GATEWAY_LISTEN_HOST = "127.0.0.1" 
+GATEWAY_LISTEN_HOST = "0.0.0.0" 
 GATEWAY_LISTEN_PORT = 9101
 LIVE_CONNECTIONS = {}
 USER_POLICIES = {}
@@ -295,4 +295,4 @@ def run_gateway():
 if __name__ == '__main__':
     threading.Thread(target=run_gateway, daemon=True).start()
     print("\n[SERVER] API başlatılıyor (Port 5000)...")
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host='0.0.0.0', port=5000)

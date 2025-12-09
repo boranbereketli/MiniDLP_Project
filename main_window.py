@@ -142,7 +142,7 @@ class LogViewerDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("DLP Policy Manager - Admin Paneli")
+        self.setWindowTitle("YourDLP Manager")
         self.setMinimumSize(900, 650)
         
         # Ana Stil (CSS)

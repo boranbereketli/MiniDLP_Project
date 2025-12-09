@@ -116,20 +116,21 @@
             "E_POSTA": false,
             "TEL_NO": false,
             "Keywords": [
-                "bilgisayar"
+                "bilgisayar",
+                "boran"
             ]
         },
         "network": {
             "vm_user_1": {
-                "TCKN": true,
+                "E_POSTA": true,
                 "IBAN_TR": true,
                 "KREDI_KARTI": true,
-                "E_POSTA": true,
-                "TEL_NO": true,
                 "Keywords": [
                     "bilgisayar",
                     "boran"
-                ]
+                ],
+                "TCKN": true,
+                "TEL_NO": true
             }
         }
     }

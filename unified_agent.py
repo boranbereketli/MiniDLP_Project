@@ -23,11 +23,31 @@ from YOUR_DLP_LIB import (
 )
 
 # ============================================================
-# KONFİGÜRASYON
+# KONFİGÜRASYON (CONFIG.JSON'DAN OKUR)
 # ============================================================
-SERVER_URL = "http://127.0.0.1:5000"
-GATEWAY_IP = "127.0.0.1"
+CONFIG_FILE = "config.json"
+
+# Varsayılan değerler (Dosya yoksa devreye girer)
+SERVER_IP = "127.0.0.1"
+SERVER_PORT = 5000
 GATEWAY_PORT = 9101
+
+# Dosya varsa oradaki IP'yi al
+if os.path.exists(CONFIG_FILE):
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+            SERVER_IP = config.get("server_ip", SERVER_IP)
+            SERVER_PORT = config.get("server_port", SERVER_PORT)
+            GATEWAY_PORT = config.get("gateway_port", GATEWAY_PORT)
+    except Exception as e:
+        print(f"Config okuma hatası: {e}")
+
+# URL ve IP değişkenlerini oluştur
+SERVER_URL = f"http://{SERVER_IP}:{SERVER_PORT}"
+GATEWAY_IP = SERVER_IP 
+
+# Sabit Klasör Ayarları
 SIM_USB_DIR = "SIM_USB_SURUCU"
 STYLE_FILE = "styles.qss"
 
@@ -79,18 +99,34 @@ class ClipboardWorker(QThread):
         self.policy = new_policy
 
     def run(self):
-        last_content = ""
+        # BAŞLANGIÇ FİKSİ: İlk açılışta panodaki mevcut veriyi al ki
+        # "boşluk" ile "dolu veri" arasında karışıklık olmasın.
+        try:
+            last_content = pyperclip.paste()
+        except:
+            last_content = ""
+
         while self.running:
             try:
                 clip_policy = self.policy.get("clipboard", {})
+                
+                # Pano koruması yoksa bekle
                 if not clip_policy:
-                    time.sleep(2)
+                    time.sleep(1) 
                     continue
 
-                content = pyperclip.paste() or ""
-                if content != last_content and content:
+                # Panoyu oku
+                try:
+                    current_content = pyperclip.paste() or ""
+                except:
+                    time.sleep(0.2)
+                    continue
+
+                if current_content != last_content and current_content:
                     keywords = clip_policy.get("Keywords", [])
-                    incidents = scan_content(str(content), keywords)
+                    str_content = str(current_content)
+                    
+                    incidents = scan_content(str_content, keywords)
                     blocked = []
                     match_txt = ""
 
@@ -104,21 +140,25 @@ class ClipboardWorker(QThread):
 
                     if blocked:
                         typ = ", ".join(set(blocked))
-                        clean = f"🚫 [DLP ENGELİ] {typ} tespit edildi."
-                        pyperclip.copy(clean)
-                        last_content = clean
+                        clean_msg = f"🚫 [DLP ENGELİ] {typ} tespit edildi."
+                        
+                        # Panodaki yasaklı veriyi sil, uyarı mesajını koy
+                        pyperclip.copy(clean_msg)
+                        last_content = clean_msg 
+                        
                         post_incident_to_server(self.vm_id, "Pano", typ, "ENGEL", match_txt)
                         self.signal_incident.emit(f"📋 PANO ENGELİ: {typ}")
                     else:
-                        last_content = content
-                time.sleep(1)
-            except:
+                        last_content = current_content
+                
+                time.sleep(0.2)
+                
+            except Exception as e:
                 time.sleep(1)
 
     def stop(self):
         self.running = False
         self.wait()
-
 
 class USBWorker(QThread):
     signal_incident = pyqtSignal(str)
@@ -399,16 +439,27 @@ class PolicyViewerDialog(QDialog):
         layout.addWidget(btn)
         self.setLayout(layout)
 
+    # unified_agent.py içinde PolicyViewerDialog sınıfının altındaki metodları güncelle:
+
     def create_table(self, rules):
         t = QTableWidget()
         t.setColumnCount(2)
         t.setHorizontalHeaderLabels(["Veri Tipi", "Durum"])
         t.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         t.verticalHeader().setVisible(False)
+        
+        # --- DÜZELTME BURADA: Tabloyu düzenlemeye kapatıyoruz ---
+        t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        # --------------------------------------------------------
+
         r = 0
         for k, v in rules.items():
             t.insertRow(r)
-            t.setItem(r, 0, QTableWidgetItem(k))
+            # Veri Tipi Sütunu (Sadece Okunur)
+            item_key = QTableWidgetItem(k)
+            t.setItem(r, 0, item_key)
+
+            # Durum Sütunu
             if k == "Keywords":
                 it = QTableWidgetItem(", ".join(v) if v else "-")
                 it.setForeground(QColor("blue"))
@@ -417,8 +468,31 @@ class PolicyViewerDialog(QDialog):
                 it.setBackground(QColor("#ffcdd2" if v else "#c8e6c9"))
                 it.setForeground(QColor("#b71c1c" if v else "#1b5e20"))
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            
             t.setItem(r, 1, it)
             r += 1
+        return t
+
+    def create_network_tree(self, net):
+        t = QTreeWidget()
+        t.setHeaderLabels(["Hedef / Kural", "Durum"])
+        t.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+
+        for user, rules in net.items():
+            root = QTreeWidgetItem(t)
+            root.setText(0, f"👤 {user}")
+            root.setBackground(0, QColor("#e3f2fd"))
+            root.setExpanded(True)
+            for k, v in rules.items():
+                ch = QTreeWidgetItem(root)
+                ch.setText(0, k)
+                if k == "Keywords":
+                    ch.setText(1, ", ".join(v) if v else "-")
+                    ch.setForeground(1, QColor("blue"))
+                else:
+                    ch.setText(1, "⛔ YASAK" if v else "✅ İZİN")
+                    ch.setForeground(1, QColor("red" if v else "green"))
         return t
 
     def create_network_tree(self, net):
@@ -483,6 +557,7 @@ class UnifiedWindow(QWidget):
                 else:
                     QMessageBox.critical(self, "Hata", f"'{vm_id}' kaydedilmemiş bir kullanıcı adıdır.")
 
+        self.setWindowTitle(f"YourDLP {self.vm_id}")
         self.core = UnifiedAgentCore(self.vm_id)
         self.core.sig_chat_msg.connect(self.on_chat_msg)
         self.core.sig_dlp_log.connect(self.on_dlp_log)
@@ -506,6 +581,8 @@ class UnifiedWindow(QWidget):
 
         self.on_dlp_log("✅ Sistem Başlatıldı. Koruma Aktif.")
         self.on_dlp_log(f"👤 Kullanıcı: {self.vm_id}")
+        self.init_tray()
+
 
     def build_fancy_header(self):
         f = QFrame()
@@ -644,15 +721,66 @@ class UnifiedWindow(QWidget):
         self.lbl_status.setText("Gateway: ✔ ÇEVRİMİÇİ" if c else "Gateway: ✖ BAĞLANTI YOK")
         self.lbl_status.setStyleSheet(f"color: {'#2e7d32' if c else '#d32f2f'}; font-weight: bold;")
 
-    def closeEvent(self, e):
-        self.core.stop()
-        e.accept()
+    def closeEvent(self, event):
+        """Pencere kapatılınca kapanma, tepsiye küçül."""
+        if self.tray_icon.isVisible():
+            self.hide()
+            
+            # Kullanıcıya bilgi ver (Balon bildirimi)
+            self.tray_icon.showMessage(
+                "YourDLP Ajanı",
+                "Koruma arka planda devam ediyor.\nÇıkmak için tepsi simgesine sağ tıklayın.",
+                QSystemTrayIcon.MessageIcon.Information,
+                2000
+            )
+            event.ignore() 
+        else:
+            self.core.stop()
+            event.accept()
+
+    def init_tray(self):
+        """Sistem tepsisi simgesini ve menüsünü hazırlar."""
+        self.tray_icon = QSystemTrayIcon(self)
+        
+        # Simgesi yoksa sistemin standart bilgisayar ikonunu kullan
+        icon = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        self.tray_icon.setIcon(icon)
+        
+        # Tepsi Menüsü
+        tray_menu = QMenu()
+        
+        action_show = tray_menu.addAction("Göster")
+        action_show.triggered.connect(self.show)
+        
+        action_quit = tray_menu.addAction("Tamamen Kapat")
+        action_quit.triggered.connect(self.quit_app)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+        
+        # İkna çift tıklayınca pencereyi aç
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+
+    def on_tray_icon_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self.show()
+
+    def quit_app(self):
+        """Uygulamayı gerçekten kapatır."""
+        # Kullanıcıya sormak istersen burayı açabilirsin:
+        # reply = QMessageBox.question(self, 'Çıkış', 'Koruma durdurulacak. Emin misiniz?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        # if reply == QMessageBox.StandardButton.No: return
+
+        self.tray_icon.hide()
+        self.core.stop() # Threadleri durdur
+        QApplication.quit()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # Stili dosyadan yükle
+    app.setQuitOnLastWindowClosed(False)   
     app.setStyleSheet(load_stylesheet())
+    
     win = UnifiedWindow()
     win.show()
     sys.exit(app.exec())

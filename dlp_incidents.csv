@@ -90,3 +90,21 @@ Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay
 2025-12-08 00:00:28,Ağ,Genel,İZİN,vm_user_1->vm_user_4
 2025-12-08 00:00:34,Ağ,KEYWORD,ENGEL,vm_user_4->vm_user_1
 2025-12-08 00:00:58,Ağ,KEYWORD,ENGEL,vm_user_4->vm_user_1
+2025-12-08 20:58:23,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-08 20:58:31,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-08 20:58:34,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-08 20:58:36,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-08 20:58:40,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-08 20:58:42,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-08 20:58:48,Ağ,KEYWORD,ENGEL,vm_user_1->vm_user_2
+2025-12-09 17:29:04,Pano,ANAHTAR_KELİME,ENGEL,User: vm_user_1 | 
+2025-12-09 17:30:06,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******0504
+2025-12-09 17:31:57,Pano,ANAHTAR_KELİME,ENGEL,User: vm_user_1 | 
+2025-12-09 17:32:40,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-09 17:32:57,Ağ,TCKN,ENGEL,vm_user_2->vm_user_1
+2025-12-09 17:33:10,Ağ,KEYWORD,ENGEL,vm_user_1->vm_user_2
+2025-12-09 17:33:12,Ağ,KEYWORD,ENGEL,vm_user_1->vm_user_2
+2025-12-09 17:33:16,Ağ,TCKN,ENGEL,vm_user_1->vm_user_2
+2025-12-09 17:33:21,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-09 17:40:17,Ağ,Hata,HATA,vm_user_2->vm_user_1 (Alıcı Offline)
+2025-12-09 20:49:59,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******2716

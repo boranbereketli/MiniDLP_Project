@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 
-# Kütüphaneden gerekli fonksiyonları al (Aynen korunuyor)
+# Take necessary functions from the library (Maintained as is)
 from YOUR_DLP_LIB import (
     scan_content, read_file_content, quarantine_file,
     get_usb_mount_points, QUARANTINE_DIR, ALLOWED_EXT,
@@ -23,16 +23,16 @@ from YOUR_DLP_LIB import (
 )
 
 # ============================================================
-# KONFİGÜRASYON (CONFIG.JSON'DAN OKUR)
+# CONFIGURATION (READS FROM CONFIG.JSON)
 # ============================================================
 CONFIG_FILE = "config.json"
 
-# Varsayılan değerler (Dosya yoksa devreye girer)
+# Default values (Used if file does not exist)
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 5000
 GATEWAY_PORT = 9101
 
-# Dosya varsa oradaki IP'yi al
+# If file exists, take IP from there
 if os.path.exists(CONFIG_FILE):
     try:
         with open(CONFIG_FILE, 'r') as f:
@@ -41,14 +41,14 @@ if os.path.exists(CONFIG_FILE):
             SERVER_PORT = config.get("server_port", SERVER_PORT)
             GATEWAY_PORT = config.get("gateway_port", GATEWAY_PORT)
     except Exception as e:
-        print(f"Config okuma hatası: {e}")
+        print(f"Config reading error: {e}")
 
-# URL ve IP değişkenlerini oluştur
+# Create URL and IP variables
 SERVER_URL = f"http://{SERVER_IP}:{SERVER_PORT}"
 GATEWAY_IP = SERVER_IP 
 
-# Sabit Klasör Ayarları
-SIM_USB_DIR = "SIM_USB_SURUCU"
+# Static Folder Settings
+SIM_USB_DIR = "SIM_USB_DRIVE"
 STYLE_FILE = "styles.qss"
 
 os.makedirs(QUARANTINE_DIR, exist_ok=True)
@@ -56,10 +56,10 @@ os.makedirs(SIM_USB_DIR, exist_ok=True)
 
 
 # ============================================================
-# YARDIMCI FONKSİYONLAR
+# HELPER FUNCTIONS
 # ============================================================
 def load_stylesheet():
-    """styles.qss dosyasını okur."""
+    """Reads styles.qss file."""
     if os.path.exists(STYLE_FILE):
         try:
             with open(STYLE_FILE, "r", encoding="utf-8") as f:
@@ -99,8 +99,8 @@ class ClipboardWorker(QThread):
         self.policy = new_policy
 
     def run(self):
-        # BAŞLANGIÇ FİKSİ: İlk açılışta panodaki mevcut veriyi al ki
-        # "boşluk" ile "dolu veri" arasında karışıklık olmasın.
+        # INITIAL FIX: Get existing clipboard data on startup so
+        # there's no confusion between "empty" and "existing data".
         try:
             last_content = pyperclip.paste()
         except:
@@ -110,12 +110,12 @@ class ClipboardWorker(QThread):
             try:
                 clip_policy = self.policy.get("clipboard", {})
                 
-                # Pano koruması yoksa bekle
+                # Wait if no clipboard protection
                 if not clip_policy:
                     time.sleep(1) 
                     continue
 
-                # Panoyu oku
+                # Read clipboard
                 try:
                     current_content = pyperclip.paste() or ""
                 except:
@@ -133,21 +133,21 @@ class ClipboardWorker(QThread):
                     for inc in incidents:
                         dt = inc["data_type"]
                         if dt == "KEYWORD_MATCH" and keywords:
-                            blocked.append("ANAHTAR_KELİME")
+                            blocked.append("KEYWORD")
                         if clip_policy.get(dt, False):
                             blocked.append(dt)
                             match_txt = inc.get("masked_match", "")
 
                     if blocked:
                         typ = ", ".join(set(blocked))
-                        clean_msg = f"🚫 [DLP ENGELİ] {typ} tespit edildi."
+                        clean_msg = f"🚫 [DLP BLOCK] {typ} detected."
                         
-                        # Panodaki yasaklı veriyi sil, uyarı mesajını koy
+                        # Clear restricted data, set warning message
                         pyperclip.copy(clean_msg)
                         last_content = clean_msg 
                         
-                        post_incident_to_server(self.vm_id, "Pano", typ, "ENGEL", match_txt)
-                        self.signal_incident.emit(f"📋 PANO ENGELİ: {typ}")
+                        post_incident_to_server(self.vm_id, "Clipboard", typ, "BLOCK", match_txt)
+                        self.signal_incident.emit(f"📋 CLIPBOARD BLOCK: {typ}")
                     else:
                         last_content = current_content
                 
@@ -183,17 +183,17 @@ class USBWorker(QThread):
             try:
                 curr = set(get_usb_mount_points(SIM_USB_DIR))
                 
-                # Yeni Takılanlar
+                # Newly Connected
                 for m in (curr - self.known_mounts):
                     self.start_obs(m)
                     self.known_mounts.add(m)
-                    self.signal_incident.emit(f"🔌 USB Takıldı: {m}")
+                    self.signal_incident.emit(f"🔌 USB Connected: {m}")
 
-                # Çıkarılanlar
+                # Removed
                 for m in (self.known_mounts - curr):
                     self.stop_obs(m)
                     self.known_mounts.discard(m)
-                    self.signal_incident.emit(f"🔌 USB Çıkarıldı: {m}")
+                    self.signal_incident.emit(f"🔌 USB Disconnected: {m}")
 
                 time.sleep(2)
             except:
@@ -251,15 +251,15 @@ class USBHandler(FileSystemEventHandler):
             for i in incs:
                 dt = i["data_type"]
                 if dt == "KEYWORD_MATCH" and kws:
-                    blocked.append("ANAHTAR_KELİME")
+                    blocked.append("KEYWORD")
                 if p.get(dt, False):
                     blocked.append(dt)
 
             if blocked:
                 typ = ", ".join(set(blocked))
                 quarantine_file(path)
-                post_incident_to_server(self.vm_id, "USB Transfer", typ, "ENGEL", f"{name} -> Karantina")
-                self.signal.emit(f"💾 USB ENGELİ: {name} ({typ}) -> Karantinaya alındı.")
+                post_incident_to_server(self.vm_id, "USB Transfer", typ, "BLOCK", f"{name} -> Quarantine")
+                self.signal.emit(f"💾 USB BLOCK: {name} ({typ}) -> Quarantined.")
         except:
             pass
 
@@ -275,10 +275,10 @@ class USBHandler(FileSystemEventHandler):
 
 
 # ============================================================
-# CORE ENGINE (NETWORK GÜNCELLEMESİ)
+# CORE ENGINE (NETWORK UPDATE)
 # ============================================================
 class UnifiedAgentCore(QObject):
-    # (Mesaj, Benim_Mesajim_Mi, Hata_Var_Mi)
+    # (Message, Is_Mine, Is_Error)
     sig_chat_msg = pyqtSignal(str, bool, bool) 
     sig_dlp_log = pyqtSignal(str)
     sig_net_status = pyqtSignal(bool)
@@ -322,7 +322,7 @@ class UnifiedAgentCore(QObject):
             self.sock.sendall(f"HELLO:{self.vm_id}\n".encode("utf-8"))
             f = self.sock.makefile("r", encoding="utf-8")
             
-            # Sunucudan WELCOME bekliyoruz
+            # Expecting WELCOME from server
             resp = f.readline()
             if "WELCOME" in resp:
                 self.sig_net_status.emit(True)
@@ -347,43 +347,43 @@ class UnifiedAgentCore(QObject):
                 if not line: raise Exception
                 raw = line.strip()
 
-                # 1. Başka kullanıcıdan normal mesaj geldi
-                # Format: MSG:gonderen:icerik
+                # 1. Normal message from another user
+                # Format: MSG:sender:content
                 if raw.startswith("MSG:"):
                     parts = raw.split(":", 2)
                     sender = parts[1]
                     content = parts[2]
                     self.sig_chat_msg.emit(f"<b>{sender}:</b> {content}", False, False)
 
-                # 2. Server benim mesajımı onayladı (ACK)
-                # Format: ACK:alici:icerik
+                # 2. Server approved my message (ACK)
+                # Format: ACK:receiver:content
                 elif raw.startswith("ACK:"):
                     parts = raw.split(":", 2)
                     target = parts[1]
                     content = parts[2]
-                    # true, true -> Benim mesajım, Hata yok
-                    self.sig_chat_msg.emit(f"<b>BEN -> {target}:</b> {content}", True, False)
+                    # true, true -> My message, No error
+                    self.sig_chat_msg.emit(f"<b>ME -> {target}:</b> {content}", True, False)
 
-                # 3. Server mesajımı engelledi veya hata döndü (ERR)
-                # Format: ERR:alici:hata_kodu
+                # 3. Server blocked my message or returned error (ERR)
+                # Format: ERR:receiver:error_code
                 elif raw.startswith("ERR:"):
                     parts = raw.split(":", 2)
                     target = parts[1]
                     err_code = parts[2]
                     
                     if "BLOCKED" in err_code:
-                        reason = err_code.split(":")[1] if ":" in err_code else "Yasaklı İçerik"
-                        error_msg = f"🚫 <b>İLETİLEMEDİ ({target}):</b> Mesajınız '{reason}' sebebiyle engellendi."
-                        self.sig_chat_msg.emit(error_msg, True, True) # True, True -> Benim mesajım, Hata VAR
-                        self.sig_dlp_log.emit(f"Ağ Engeli: {target}'a gönderim '{reason}' nedeniyle bloklandı.")
+                        reason = err_code.split(":")[1] if ":" in err_code else "Restricted Content"
+                        error_msg = f"🚫 <b>UNDELIVERED ({target}):</b> Your message was blocked due to '{reason}'."
+                        self.sig_chat_msg.emit(error_msg, True, True) # True, True -> My message, Error EXISTS
+                        self.sig_dlp_log.emit(f"Network Block: Sending to {target} was blocked due to '{reason}'.")
                     
                     elif "OFFLINE" in err_code:
-                        self.sig_chat_msg.emit(f"⚠️ <b>HATA:</b> {target} çevrimdışı.", True, True)
+                        self.sig_chat_msg.emit(f"⚠️ <b>ERROR:</b> {target} is offline.", True, True)
                     
                     else:
-                        self.sig_chat_msg.emit(f"⚠️ <b>HATA:</b> Gönderim başarısız.", True, True)
+                        self.sig_chat_msg.emit(f"⚠️ <b>ERROR:</b> Send failed.", True, True)
 
-                # Eski format desteği (ne olur ne olmaz)
+                # Support for old format
                 elif raw.startswith("[DLP]"):
                     self.sig_dlp_log.emit(raw)
                     
@@ -394,14 +394,14 @@ class UnifiedAgentCore(QObject):
 
     def send(self, target, msg):
         if not self.sock:
-            self.sig_dlp_log.emit("⚠️ Mesaj gönderilemedi: Gateway kapalı.")
+            self.sig_dlp_log.emit("⚠️ Message could not be sent: Gateway offline.")
             return
         try:
-            # Sadece gönderiyoruz, ekrana basmıyoruz. Ekrana basma işi ACK gelince olacak.
+            # Only sending, not printing. Printing happens when ACK arrives.
             self.sock.sendall((json.dumps({"dst": target, "channel": "chat", "payload": msg}) + "\n").encode("utf-8"))
         except:
             self.sock = None
-            self.sig_dlp_log.emit("⚠️ Gönderim hatası.")
+            self.sig_dlp_log.emit("⚠️ Sending error.")
 
     def stop(self):
         self.running = False
@@ -417,54 +417,52 @@ class UnifiedAgentCore(QObject):
 class PolicyViewerDialog(QDialog):
     def __init__(self, policy_data):
         super().__init__()
-        self.setWindowTitle("Güvenlik Politikası Detayları")
+        self.setWindowTitle("Security Policy Details")
         self.setMinimumSize(700, 500)
 
         layout = QVBoxLayout()
         header = QFrame()
         hl = QHBoxLayout(header)
-        hl.addWidget(QLabel("🛡️ <b>Aktif DLP Kuralları</b>"))
+        hl.addWidget(QLabel("🛡️ <b>Active DLP Rules</b>"))
         hl.addStretch()
         layout.addWidget(header)
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self.create_table(policy_data.get("clipboard", {})), "📋 Pano")
+        self.tabs.addTab(self.create_table(policy_data.get("clipboard", {})), "📋 Clipboard")
         self.tabs.addTab(self.create_table(policy_data.get("usb", {})), "💾 USB")
-        self.tabs.addTab(self.create_network_tree(policy_data.get("network", {})), "🌐 Ağ")
+        self.tabs.addTab(self.create_network_tree(policy_data.get("network", {})), "🌐 Network")
         layout.addWidget(self.tabs)
 
-        btn = QPushButton("Kapat")
+        btn = QPushButton("Close")
         btn.clicked.connect(self.close)
         btn.setStyleSheet("background-color: #666;")
         layout.addWidget(btn)
         self.setLayout(layout)
 
-    # unified_agent.py içinde PolicyViewerDialog sınıfının altındaki metodları güncelle:
-
     def create_table(self, rules):
         t = QTableWidget()
         t.setColumnCount(2)
-        t.setHorizontalHeaderLabels(["Veri Tipi", "Durum"])
+        t.setHorizontalHeaderLabels(["Data Type", "Status"])
         t.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         t.verticalHeader().setVisible(False)
         
-        # --- DÜZELTME BURADA: Tabloyu düzenlemeye kapatıyoruz ---
+        # --- FIX HERE: Table set to non-editable ---
         t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         # --------------------------------------------------------
 
         r = 0
         for k, v in rules.items():
             t.insertRow(r)
-            # Veri Tipi Sütunu (Sadece Okunur)
+            # Data Type Column (Read Only)
             item_key = QTableWidgetItem(k)
             t.setItem(r, 0, item_key)
 
-            # Durum Sütunu
+            # Status Column
             if k == "Keywords":
                 it = QTableWidgetItem(", ".join(v) if v else "-")
                 it.setForeground(QColor("blue"))
             else:
-                it = QTableWidgetItem("⛔ YASAK" if v else "✅ İZİN")
+                it = QTableWidgetItem("⛔ BLOCKED" if v else "✅ ALLOWED")
                 it.setBackground(QColor("#ffcdd2" if v else "#c8e6c9"))
                 it.setForeground(QColor("#b71c1c" if v else "#1b5e20"))
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -475,7 +473,7 @@ class PolicyViewerDialog(QDialog):
 
     def create_network_tree(self, net):
         t = QTreeWidget()
-        t.setHeaderLabels(["Hedef / Kural", "Durum"])
+        t.setHeaderLabels(["Target / Rule", "Status"])
         t.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
@@ -491,32 +489,12 @@ class PolicyViewerDialog(QDialog):
                     ch.setText(1, ", ".join(v) if v else "-")
                     ch.setForeground(1, QColor("blue"))
                 else:
-                    ch.setText(1, "⛔ YASAK" if v else "✅ İZİN")
-                    ch.setForeground(1, QColor("red" if v else "green"))
-        return t
-
-    def create_network_tree(self, net):
-        t = QTreeWidget()
-        t.setHeaderLabels(["Hedef / Kural", "Durum"])
-        t.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        for user, rules in net.items():
-            root = QTreeWidgetItem(t)
-            root.setText(0, f"👤 {user}")
-            root.setBackground(0, QColor("#e3f2fd"))
-            root.setExpanded(True)
-            for k, v in rules.items():
-                ch = QTreeWidgetItem(root)
-                ch.setText(0, k)
-                if k == "Keywords":
-                    ch.setText(1, ", ".join(v) if v else "-")
-                    ch.setForeground(1, QColor("blue"))
-                else:
-                    ch.setText(1, "⛔ YASAK" if v else "✅ İZİN")
+                    ch.setText(1, "⛔ BLOCKED" if v else "✅ ALLOWED")
                     ch.setForeground(1, QColor("red" if v else "green"))
         return t
 
 def get_registered_users():
-    """ Sunucudan kayıtlı kullanıcı listesini çeker. """
+    """ Fetches registered user list from the server. """
     try:
         r = requests.get(f"{SERVER_URL}/users", timeout=2)
         if r.status_code == 200:
@@ -532,30 +510,30 @@ class UnifiedWindow(QWidget):
         self.setWindowTitle("DLP Unified Agent - Enterprise Edition")
         self.setMinimumSize(1000, 750)
 
-        # --- KULLANICI ADI KONTROL DÖNGÜSÜ ---
+        # --- USERNAME CONTROL LOOP ---
         valid_users = get_registered_users()
         self.vm_id = None
 
         while not self.vm_id:
-            # Kullanıcıdan VM ID'sini iste
-            vm_id, ok = QInputDialog.getText(self, "Giriş", "VM ID Giriniz (örn: vm_user_1):")
+            # Ask user for VM ID
+            vm_id, ok = QInputDialog.getText(self, "Login", "Enter VM ID (e.g., vm_user_1):")
             
-            # 1. Çıkış / İptal Kontrolü
+            # 1. Exit / Cancel Control
             if not ok: 
                 sys.exit()
 
-            # 2. Geçerli Kullanıcı Kontrolü
+            # 2. Valid User Control
             vm_id = vm_id.strip()
-            # Sunucu kapalıysa veya liste boşsa her türlü girişe izin ver (Test amaçlı)
+            # If server is off or list is empty, allow entry (For testing)
             if not valid_users:
                 if vm_id: self.vm_id = vm_id
             else:
                 if vm_id in valid_users:
                     self.vm_id = vm_id 
                 elif not vm_id:
-                    QMessageBox.critical(self, "Hata", "Kullanıcı adı boş bırakılamaz.")
+                    QMessageBox.critical(self, "Error", "Username cannot be empty.")
                 else:
-                    QMessageBox.critical(self, "Hata", f"'{vm_id}' kaydedilmemiş bir kullanıcı adıdır.")
+                    QMessageBox.critical(self, "Error", f"'{vm_id}' is not a registered username.")
 
         self.setWindowTitle(f"YourDLP {self.vm_id}")
         self.core = UnifiedAgentCore(self.vm_id)
@@ -570,8 +548,8 @@ class UnifiedWindow(QWidget):
         main.addWidget(self.build_fancy_header())
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self.build_chat_tab(), "💬 Güvenli Sohbet")
-        self.tabs.addTab(self.build_log_tab(), "🛡️ DLP Olay Günlüğü")
+        self.tabs.addTab(self.build_chat_tab(), "💬 Secure Chat")
+        self.tabs.addTab(self.build_log_tab(), "🛡️ DLP Event Log")
         main.addWidget(self.tabs)
         self.setLayout(main)
 
@@ -579,8 +557,8 @@ class UnifiedWindow(QWidget):
         self.timer.timeout.connect(self.core.refresh_policy)
         self.timer.start(10000)
 
-        self.on_dlp_log("✅ Sistem Başlatıldı. Koruma Aktif.")
-        self.on_dlp_log(f"👤 Kullanıcı: {self.vm_id}")
+        self.on_dlp_log("✅ System Started. Protection Active.")
+        self.on_dlp_log(f"👤 User: {self.vm_id}")
         self.init_tray()
 
 
@@ -592,7 +570,7 @@ class UnifiedWindow(QWidget):
         info = QVBoxLayout()
         lbl = QLabel(f"👤 <b>{self.vm_id}</b>")
         lbl.setStyleSheet("font-size: 18px; color: #333;")
-        self.lbl_status = QLabel("Gateway: Bağlanıyor...")
+        self.lbl_status = QLabel("Gateway: Connecting...")
         self.lbl_status.setStyleSheet("color: orange; font-weight: bold;")
         info.addWidget(lbl)
         info.addWidget(self.lbl_status)
@@ -600,7 +578,7 @@ class UnifiedWindow(QWidget):
 
         l.addStretch()
 
-        btn = QPushButton("🛡️ Politikaları Görüntüle")
+        btn = QPushButton("🛡️ View Policies")
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet("background-color: #2e7d32; padding: 10px 20px; font-size: 14px;")
         btn.clicked.connect(lambda: PolicyViewerDialog(self.core.policy).exec())
@@ -615,7 +593,7 @@ class UnifiedWindow(QWidget):
 
         tf = QFrame()
         hl = QHBoxLayout(tf)
-        hl.addWidget(QLabel("<b>Kime Gönderilecek:</b>"))
+        hl.addWidget(QLabel("<b>Recipient:</b>"))
         self.cmb_target = QComboBox()
         self.cmb_target.setMinimumWidth(200)
         self.load_users()
@@ -632,13 +610,13 @@ class UnifiedWindow(QWidget):
 
         bl = QHBoxLayout()
         self.txt_msg = QLineEdit()
-        self.txt_msg.setPlaceholderText("Güvenli mesajınızı buraya yazın...")
+        self.txt_msg.setPlaceholderText("Type your secure message here...")
         self.txt_msg.setStyleSheet(
             "padding: 12px; font-size: 14px; border: 1px solid #ccc; border-radius: 20px;"
         )
         self.txt_msg.returnPressed.connect(self.send_message)
 
-        btn = QPushButton("Gönder ➤")
+        btn = QPushButton("Send ➤")
         btn.setStyleSheet(
             "QPushButton { background-color: #0078d7; border-radius: 20px; padding: 10px 20px; font-size: 14px; } QPushButton:hover { background-color: #005a9e; }"
         )
@@ -655,9 +633,9 @@ class UnifiedWindow(QWidget):
         l = QVBoxLayout(w)
 
         h = QHBoxLayout()
-        h.addWidget(QLabel("<b>Gerçek Zamanlı İhlal ve Sistem Kayıtları</b>"))
+        h.addWidget(QLabel("<b>Real-Time Violation and System Logs</b>"))
         h.addStretch()
-        btn = QPushButton("🧹 Temizle")
+        btn = QPushButton("Sweep 🧹 Clear")
         btn.setStyleSheet("background-color: #757575; font-size: 12px; padding: 5px 10px;")
         btn.clicked.connect(lambda: self.log_box.clear())
         h.addWidget(btn)
@@ -689,7 +667,7 @@ class UnifiedWindow(QWidget):
             pass
 
     def on_chat_msg(self, msg, is_mine, is_error):
-        # YENİ ÖZELLİK: Hata durumunda kırmızı kutu
+        # NEW FEATURE: Red box for error status
         if is_error:
              self.chat_area.append(
                 f"<div style='text-align: center; margin: 5px;'><span style='background-color: #ffebee; border: 1px solid #ffcdd2; color: #c62828; padding: 8px 12px; font-size: 14px; font-weight: bold;'>{msg}</span></div>"
@@ -706,10 +684,10 @@ class UnifiedWindow(QWidget):
 
     def on_dlp_log(self, msg):
         ts = time.strftime("[%H:%M:%S]")
-        if "ENGEL" in msg or "HATA" in msg:
+        if "BLOCK" in msg or "ERROR" in msg:
             color = "#ff5252"
             icon = "❌"
-        elif "Takıldı" in msg or "Çıkarıldı" in msg:
+        elif "Connected" in msg or "Disconnected" in msg:
             color = "#ffff00"
             icon = "⚠️"
         else:
@@ -718,18 +696,18 @@ class UnifiedWindow(QWidget):
         self.log_box.append(f"<span style='color:{color}'>{ts} {icon} {msg}</span>")
 
     def on_net_status(self, c):
-        self.lbl_status.setText("Gateway: ✔ ÇEVRİMİÇİ" if c else "Gateway: ✖ BAĞLANTI YOK")
+        self.lbl_status.setText("Gateway: ✔ ONLINE" if c else "Gateway: ✖ NO CONNECTION")
         self.lbl_status.setStyleSheet(f"color: {'#2e7d32' if c else '#d32f2f'}; font-weight: bold;")
 
     def closeEvent(self, event):
-        """Pencere kapatılınca kapanma, tepsiye küçül."""
+        """Minimize to tray instead of closing when window is closed."""
         if self.tray_icon.isVisible():
             self.hide()
             
-            # Kullanıcıya bilgi ver (Balon bildirimi)
+            # Inform user (Balloon notification)
             self.tray_icon.showMessage(
-                "YourDLP Ajanı",
-                "Koruma arka planda devam ediyor.\nÇıkmak için tepsi simgesine sağ tıklayın.",
+                "YourDLP Agent",
+                "Protection continues in the background.\nRight-click tray icon to exit.",
                 QSystemTrayIcon.MessageIcon.Information,
                 2000
             )
@@ -739,26 +717,26 @@ class UnifiedWindow(QWidget):
             event.accept()
 
     def init_tray(self):
-        """Sistem tepsisi simgesini ve menüsünü hazırlar."""
+        """Prepares system tray icon and menu."""
         self.tray_icon = QSystemTrayIcon(self)
         
-        # Simgesi yoksa sistemin standart bilgisayar ikonunu kullan
+        # Use standard computer icon if icon file is missing
         icon = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
         self.tray_icon.setIcon(icon)
         
-        # Tepsi Menüsü
+        # Tray Menu
         tray_menu = QMenu()
         
-        action_show = tray_menu.addAction("Göster")
+        action_show = tray_menu.addAction("Show")
         action_show.triggered.connect(self.show)
         
-        action_quit = tray_menu.addAction("Tamamen Kapat")
+        action_quit = tray_menu.addAction("Exit Completely")
         action_quit.triggered.connect(self.quit_app)
         
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
         
-        # İkna çift tıklayınca pencereyi aç
+        # Open window on double click
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
 
     def on_tray_icon_activated(self, reason):
@@ -766,13 +744,9 @@ class UnifiedWindow(QWidget):
             self.show()
 
     def quit_app(self):
-        """Uygulamayı gerçekten kapatır."""
-        # Kullanıcıya sormak istersen burayı açabilirsin:
-        # reply = QMessageBox.question(self, 'Çıkış', 'Koruma durdurulacak. Emin misiniz?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        # if reply == QMessageBox.StandardButton.No: return
-
+        """Truly closes the application."""
         self.tray_icon.hide()
-        self.core.stop() # Threadleri durdur
+        self.core.stop() # Stop threads
         QApplication.quit()
 
 

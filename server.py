@@ -8,7 +8,7 @@ import os
 import json
 import csv 
 
-# Harici kütüphaneniz
+# Your external library
 from YOUR_DLP_LIB import (
     scan_content, Message, LOG_CSV, 
     DLP_SCAN_ORDER 
@@ -17,7 +17,7 @@ from YOUR_DLP_LIB import (
 app = Flask(__name__)
 POLICY_FILE = "policies.json"
 
-# Konsol Renkleri
+# Console Colors
 class Colors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -36,15 +36,15 @@ LIVE_CONNECTIONS = {}
 USER_POLICIES = {}
 
 # ============================================================
-# PERSISTENCE (Kalıcılık)
+# PERSISTENCE
 # ============================================================
 def save_policies():
     try:
         with open(POLICY_FILE, 'w', encoding='utf-8') as f:
             json.dump(USER_POLICIES, f, indent=4, ensure_ascii=False)
-        print(f"{Colors.OKGREEN}[SERVER] Politikalar kaydedildi.{Colors.ENDC}")
+        print(f"{Colors.OKGREEN}[SERVER] Policies saved.{Colors.ENDC}")
     except Exception as e:
-        print(f"{Colors.FAIL}[ERROR] Politikalar kaydedilemedi: {e}{Colors.ENDC}")
+        print(f"{Colors.FAIL}[ERROR] Policies could not be saved: {e}{Colors.ENDC}")
 
 def load_policies():
     global USER_POLICIES
@@ -52,10 +52,10 @@ def load_policies():
         try:
             with open(POLICY_FILE, 'r', encoding='utf-8') as f:
                 USER_POLICIES = json.load(f)
-            print(f"{Colors.OKCYAN}[SERVER] Politikalar yüklendi: {len(USER_POLICIES)} kullanıcı.{Colors.ENDC}")
+            print(f"{Colors.OKCYAN}[SERVER] Policies loaded: {len(USER_POLICIES)} users.{Colors.ENDC}")
             return
         except Exception as e:
-            print(f"{Colors.FAIL}[ERROR] Yükleme hatası: {e}.{Colors.ENDC}")
+            print(f"{Colors.FAIL}[ERROR] Loading error: {e}.{Colors.ENDC}")
     
     USER_POLICIES = {}
     save_policies()
@@ -70,11 +70,11 @@ def log_incident(event_type, data_type, action, details):
         file_exists = os.path.exists(LOG_CSV)
         with open(LOG_CSV, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            # Dosya yoksa başlıkları yaz
+            # Write headers if file does not exist
             if not file_exists:
-                writer.writerow(["Tarih", "Olay_Tipi", "Veri_Tipi", "Aksiyon", "Detay"])
+                writer.writerow(["Date", "Event_Type", "Data_Type", "Action", "Details"])
             
-            # Veriyi güvenli şekilde yaz
+            # Write data securely
             writer.writerow([
                 time.strftime('%Y-%m-%d %H:%M:%S'),
                 event_type,
@@ -85,12 +85,12 @@ def log_incident(event_type, data_type, action, details):
     except Exception as e:
         print(f"[LOG ERROR] {e}")
 
-    # --- KONSOL ÇIKTISI ---
+    # --- CONSOLE OUTPUT ---
     timestamp = time.strftime('%H:%M:%S')
-    if "ENGEL" in action:
+    if "BLOCK" in action:
         color = Colors.FAIL
         icon = "⛔"
-    elif "İZİN" in action:
+    elif "ALLOW" in action:
         color = Colors.OKGREEN
         icon = "✅"
     else:
@@ -107,29 +107,29 @@ def log_incident(event_type, data_type, action, details):
 
 @app.route('/all_logs', methods=['GET'])
 def get_all_logs():
-    """CSV dosyasını okur ve JSON olarak döner. Hatalı satırları onarır."""
+    """Reads CSV file and returns as JSON. Repairs malformed lines."""
     logs = []
     if os.path.exists(LOG_CSV):
         try:
             with open(LOG_CSV, 'r', encoding='utf-8') as f:
-                # DictReader kullanıyoruz
+                # Using DictReader
                 reader = csv.DictReader(f)
                 
-                # --- HATA DÜZELTME BLOĞU ---
+                # --- ERROR CORRECTION BLOCK ---
                 for row in reader:
-                    # Eğer satırda beklenenden fazla virgül varsa, DictReader bunları 'None' key'ine atar.
-                    # Bu durum JSON.dumps'ta çökme yaratır. Bunu temizliyoruz:
+                    # If a line has more commas than expected, DictReader assigns them to 'None' key.
+                    # This causes a crash in JSON.dumps. Cleaning it:
                     if None in row:
-                        extra_data = row.pop(None) # None key'ini sil ve veriyi al
-                        # Ekstra veriyi 'Detay' sütununa ekleyelim ki kaybolmasın
-                        if 'Detay' in row and extra_data:
-                            row['Detay'] += " " + " ".join(extra_data)
+                        extra_data = row.pop(None) # Delete None key and get data
+                        # Add extra data to 'Details' column so it is not lost
+                        if 'Details' in row and extra_data:
+                            row['Details'] += " " + " ".join(extra_data)
                     
                     logs.append(row)
                 
-                logs.reverse() # En yeniler en üstte
+                logs.reverse() # Newest on top
         except Exception as e:
-            # Hata durumunda boş liste dön, sunucuyu çökertme
+            # Return empty list on error, do not crash server
             print(f"[LOG READ ERROR] {e}")
             return jsonify({"error": str(e), "logs": []})
             
@@ -166,7 +166,7 @@ def update_policy():
     new_policies = data.get("policies")
 
     if not user_id or not new_policies:
-        return jsonify({"error": "Eksik parametre"}), 400
+        return jsonify({"error": "Missing parameter"}), 400
 
     current_policy = USER_POLICIES.get(user_id, {})
     
@@ -190,7 +190,7 @@ def process_message(msg: Message, sender_sock):
     dst = msg.dst
     
     if dst not in LIVE_CONNECTIONS:
-        log_incident("Ağ", "Hata", "HATA", f"{src}->{dst} (Alıcı Offline)")
+        log_incident("Network", "Error", "ERROR", f"{src}->{dst} (Recipient Offline)")
         return False, "OFFLINE"
 
     src_policy = USER_POLICIES.get(src, {})
@@ -199,7 +199,7 @@ def process_message(msg: Message, sender_sock):
     recipient_sock = LIVE_CONNECTIONS[dst]['socket']
 
     if network_policy_for_dst is None:
-        log_incident("Ağ", "Genel", "İZİN", f"{src}->{dst}")
+        log_incident("Network", "General", "ALLOW", f"{src}->{dst}")
         try:
             recipient_sock.sendall(f"MSG:{src}:{msg.payload}\n".encode("utf-8"))
             return True, "OK"
@@ -221,10 +221,10 @@ def process_message(msg: Message, sender_sock):
         
     if blocked_reasons:
         reason_str = "/".join(set(blocked_reasons))
-        log_incident("Ağ", reason_str, "ENGEL", f"{src}->{dst}")
+        log_incident("Network", reason_str, "BLOCK", f"{src}->{dst}")
         return False, f"BLOCKED:{reason_str}"
     
-    log_incident("Ağ", "Temiz", "İZİN", f"{src}->{dst}")
+    log_incident("Network", "Clean", "ALLOW", f"{src}->{dst}")
     try:
         recipient_sock.sendall(f"MSG:{src}:{msg.payload}\n".encode("utf-8"))
         return True, "OK"
@@ -240,7 +240,7 @@ def client_handler(conn, addr):
         if first_line.startswith("HELLO:"):
             user_id = first_line.split(":", 1)[1].strip()
             LIVE_CONNECTIONS[user_id] = {'ip': addr[0], 'socket': conn}
-            print(f"{Colors.OKBLUE}[GATEWAY] Bağlandı: {user_id} ({addr[0]}){Colors.ENDC}")
+            print(f"{Colors.OKBLUE}[GATEWAY] Connected: {user_id} ({addr[0]}){Colors.ENDC}")
             conn.sendall(f"WELCOME:{user_id}\n".encode("utf-8"))
         else:
             conn.close()
@@ -273,7 +273,7 @@ def client_handler(conn, addr):
     finally:
         if user_id and user_id in LIVE_CONNECTIONS:
             del LIVE_CONNECTIONS[user_id]
-            print(f"{Colors.WARNING}[GATEWAY] Ayrıldı: {user_id}{Colors.ENDC}")
+            print(f"{Colors.WARNING}[GATEWAY] Disconnected: {user_id}{Colors.ENDC}")
         try: conn.close()
         except: pass
 
@@ -283,7 +283,7 @@ def run_gateway():
     try:
         server_sock.bind((GATEWAY_LISTEN_HOST, GATEWAY_LISTEN_PORT))
         server_sock.listen(5)
-        print(f"{Colors.HEADER}[GATEWAY] Dinleniyor: {GATEWAY_LISTEN_HOST}:{GATEWAY_LISTEN_PORT}{Colors.ENDC}")
+        print(f"{Colors.HEADER}[GATEWAY] Listening: {GATEWAY_LISTEN_HOST}:{GATEWAY_LISTEN_PORT}{Colors.ENDC}")
         while True:
             conn, addr = server_sock.accept()
             threading.Thread(target=client_handler, args=(conn, addr), daemon=True).start()
@@ -294,5 +294,5 @@ def run_gateway():
 
 if __name__ == '__main__':
     threading.Thread(target=run_gateway, daemon=True).start()
-    print("\n[SERVER] API başlatılıyor (Port 5000)...")
+    print("\n[SERVER] API starting (Port 5000)...")
     app.run(host='0.0.0.0', port=5000)

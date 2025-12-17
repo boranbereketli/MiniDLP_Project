@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import *
 class AddUserDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Yeni Kullanıcı")
+        self.setWindowTitle("New User")
 
         form = QFormLayout()
 
@@ -15,9 +15,9 @@ class AddUserDialog(QDialog):
         form.addRow("VM ID:", self.vm_id)
         form.addRow("IP:", self.ip)
         form.addRow("Port:", self.port)
-        form.addRow("Ad:", self.name)
+        form.addRow("Name:", self.name)
 
-        btn = QPushButton("Kaydet")
+        btn = QPushButton("Save")
         btn.clicked.connect(self.accept)
         form.addWidget(btn)
 

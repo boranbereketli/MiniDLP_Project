@@ -1,6 +1,6 @@
-/* styles.qss - MERKEZİ TASARIM DOSYASI */
+/* styles.qss - CENTRAL DESIGN FILE */
 
-/* --- GENEL AYARLAR --- */
+/* --- GENERAL SETTINGS --- */
 QWidget {
     font-family: 'Segoe UI', sans-serif;
     font-size: 14px;
@@ -10,7 +10,7 @@ QMainWindow, QDialog {
     background-color: #f4f6f9;
 }
 
-/* --- SEKMELER (TAB WIDGET) --- */
+/* --- TAB WIDGETS --- */
 QTabWidget::pane {
     border: 1px solid #dcdcdc;
     background: white;
@@ -32,7 +32,7 @@ QTabBar::tab:selected {
     color: #0078d7;
 }
 
-/* --- FORM ELEMANLARI --- */
+/* --- FORM ELEMENTS --- */
 QLineEdit, QComboBox {
     padding: 8px;
     border: 1px solid #ccc;
@@ -43,7 +43,7 @@ QLineEdit:focus, QComboBox:focus {
     border: 1px solid #0078d7;
 }
 
-/* --- TABLO VE LİSTELER --- */
+/* --- TABLES AND LISTS --- */
 QTreeWidget, QTableWidget {
     border: 1px solid #ddd;
     alternate-background-color: #f9f9f9;
@@ -56,9 +56,9 @@ QHeaderView::section {
     color: #555;
 }
 
-/* --- MAIN WINDOW ÖZEL STİLLERİ --- */
+/* --- MAIN WINDOW SPECIAL STYLES --- */
 
-/* Üst Bilgi Kartı (Header) */
+/* Info Card (Header) */
 #headerFrame {
     background-color: white; 
     border-radius: 10px; 
@@ -74,14 +74,14 @@ QHeaderView::section {
     font-size: 13px;
 }
 
-/* Kullanıcı Listesi Grubu */
+/* User List Group */
 #listGroup {
     font-weight: bold; 
     font-size: 14px; 
     margin-top: 10px;
 }
 
-/* Kullanıcı Listesi (List Widget) */
+/* User List (List Widget) */
 #userList {
     border: 1px solid #ddd; 
     border-radius: 6px; 
@@ -99,7 +99,7 @@ QHeaderView::section {
     border-radius: 4px;
 }
 
-/* --- BUTONLAR (ID'ye GÖRE RENKLENDİRME) --- */
+/* --- BUTTONS (COLORED BY ID) --- */
 QPushButton {
     color: white;
     border: none;
@@ -109,30 +109,30 @@ QPushButton {
 }
 QPushButton:hover { opacity: 0.9; }
 
-/* Buton: Genel Mavi */
+/* Button: General Blue */
 QPushButton { background-color: #0078d7; }
 
-/* Buton: Yenile (Gri) */
+/* Button: Refresh (Grey) */
 #btnRefresh { 
     background-color: #607d8b; 
     padding: 8px 15px;
 }
 
-/* Buton: Ekle (Yeşil) */
+/* Button: Add (Green) */
 #btnAdd { 
     background-color: #2e7d32; 
     padding: 12px 20px; 
     font-size: 14px;
 }
 
-/* Buton: Düzenle (Mavi) */
+/* Button: Edit (Blue) */
 #btnEdit { 
     background-color: #1565c0; 
     padding: 12px 20px; 
     font-size: 14px;
 }
 
-/* Buton: Sil (Kırmızı) */
+/* Button: Delete (Red) */
 #btnDelete { 
     background-color: #c62828; 
     padding: 12px 20px; 
@@ -142,14 +142,14 @@ QPushButton { background-color: #0078d7; }
 QTableWidget {
     background-color: white;
     border: 1px solid #dcdcdc;
-    gridline-color: #eeeeee; /* Hücre çizgileri */
+    gridline-color: #eeeeee; /* Cell grid lines */
     font-family: 'Segoe UI', sans-serif;
     font-size: 13px;
-    selection-background-color: #0078d7; /* Seçili satır rengi */
+    selection-background-color: #0078d7; /* Selected row color */
     selection-color: white;
 }
 
-/* Tablo Başlıkları */
+/* Table Headers */
 QHeaderView::section {
     background-color: #f0f0f0;
     padding: 8px;
@@ -160,7 +160,7 @@ QHeaderView::section {
     font-size: 13px;
 }
 
-/* Tablo Sol Köşedeki Boşluk */
+/* Table Corner Section */
 QTableCornerButton::section {
     background-color: #f0f0f0;
     border: none;

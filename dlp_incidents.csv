@@ -1,4 +1,4 @@
-Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay
+Date,Event_Type,Data_Type,Action,Details
 2025-11-30 14:57:42,Ağ Mesajı,Hata,ENGEL - Alıcı Offline,vm_user_1->vm_user_2
 2025-11-30 14:58:18,Pano Kopyalama,TCKN,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | TC: ******0504
 2025-11-30 14:59:17,Pano Kopyalama,IBAN_TR,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | IBAN: ****0752
@@ -108,3 +108,12 @@ Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay
 2025-12-09 17:33:21,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
 2025-12-09 17:40:17,Ağ,Hata,HATA,vm_user_2->vm_user_1 (Alıcı Offline)
 2025-12-09 20:49:59,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******2716
+2025-12-17 17:37:03,Pano,ANAHTAR_KELİME,ENGEL,User: vm_user_1 | 
+2025-12-17 17:38:09,Ağ,Hata,HATA,vm_user_1->vm_user_2 (Alıcı Offline)
+2025-12-17 17:39:18,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-17 17:39:39,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-17 17:40:30,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******2716
+2025-12-17 18:55:54,Ağ,Hata,HATA,vm_user_1->vm_user_2 (Alıcı Offline)
+2025-12-17 18:59:23,Network,Error,ERROR,vm_user_1->vm_user_2 (Recipient Offline)
+2025-12-17 19:00:52,Clipboard,KEYWORD,BLOCK,User: vm_user_1 | 
+2025-12-17 19:01:01,Clipboard,KEYWORD,BLOCK,User: vm_user_1 | 

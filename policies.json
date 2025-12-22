@@ -2,46 +2,53 @@
     "vm_user_1": {
         "clipboard": {
             "TCKN": true,
-            "IBAN_TR": true,
-            "CREDIT_CARD": true,
-            "E_MAIL": false,
-            "PHONE": false,
+            "IBAN_TR": false,
+            "CREDIT_CARD": false,
+            "EMAIL": false,
+            "PHONE_NO": false,
             "Keywords": [
-                "araba",
-                "pilot",
-                "boran",
-                "deu"
+                "password",
+                "confidential",
+                "word"
             ]
         },
         "usb": {
             "TCKN": true,
-            "IBAN_TR": true,
-            "CREDIT_CARD": true,
-            "E_MAIL": false,
-            "PHONE": false,
-            "Keywords": []
+            "IBAN_TR": false,
+            "CREDIT_CARD": false,
+            "EMAIL": false,
+            "PHONE_NO": false,
+            "Keywords": [
+                "usbdata",
+                "sensitive",
+                "secret"
+            ]
         },
         "network": {
             "vm_user_2": {
-                "E_MAIL": false,
-                "IBAN_TR": true,
-                "CREDIT_CARD": false,
-                "Keywords": [
-                    "domates",
-                    "patates"
-                ],
                 "TCKN": true,
-                "PHONE": false
-            },
-            "vm_user_3": {
-                "E_MAIL": true,
                 "IBAN_TR": true,
                 "CREDIT_CARD": true,
+                "EMAIL": true,
+                "PHONE_NO": true,
                 "Keywords": [
-                    "boran"
+                    "deu",
+                    "computer",
+                    "yourdlp",
+                    "secret"
+                ]
+            },
+            "vm_user_3": {
+                "CREDIT_CARD": true,
+                "EMAIL": false,
+                "IBAN_TR": true,
+                "Keywords": [
+                    "project",
+                    "secret",
+                    "salary"
                 ],
-                "TCKN": true,
-                "PHONE": true
+                "PHONE_NO": false,
+                "TCKN": true
             }
         }
     },
@@ -95,7 +102,7 @@
                 "E_POSTA": true,
                 "TEL_NO": true,
                 "Keywords": [
-                    "ramazan"
+                    "data"
                 ]
             }
         }
@@ -116,8 +123,7 @@
             "E_POSTA": false,
             "TEL_NO": false,
             "Keywords": [
-                "bilgisayar",
-                "boran"
+                "confidential"
             ]
         },
         "network": {
@@ -126,8 +132,7 @@
                 "IBAN_TR": true,
                 "KREDI_KARTI": true,
                 "Keywords": [
-                    "bilgisayar",
-                    "boran"
+                    "confidential"
                 ],
                 "TCKN": true,
                 "TEL_NO": true
